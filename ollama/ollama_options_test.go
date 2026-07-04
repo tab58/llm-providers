@@ -19,7 +19,7 @@ func TestOllamaOptions_NumCtx(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// WithNoRateLimit returns the raw client, so the assertion is safe.
-			c := NewClient(Config{ContextSize: tt.contextSize}, WithNoRateLimit()).(*Client)
+			c := NewClient(Config{}, WithContextSize(tt.contextSize), WithNoRateLimit()).(*Client)
 			opts := c.ollamaOptions(common.CompletionRequest{})
 			if got := opts["num_ctx"]; got != tt.wantNumCtx {
 				t.Errorf("num_ctx = %v, want %v", got, tt.wantNumCtx)
@@ -35,20 +35,20 @@ func TestOllamaOptions_NumCtx(t *testing.T) {
 func TestOllamaOptions_BaseURL(t *testing.T) {
 	tests := []struct {
 		name string
-		cfg  Config
 		opts []Option
 		want string
 	}{
-		{"defaults to Ollama Cloud", Config{}, nil, "https://ollama.com"},
-		{"WithLocalURL uses local server", Config{}, []Option{WithLocalURL()}, "http://localhost:11434"},
-		{"WithLocalURL wins over explicit BaseURL", Config{BaseURL: "https://example.test"}, []Option{WithLocalURL()}, "http://localhost:11434"},
-		{"explicit BaseURL respected", Config{BaseURL: "https://example.test"}, nil, "https://example.test"},
+		{"defaults to Ollama Cloud", nil, "https://ollama.com"},
+		{"WithLocalURL uses local server", []Option{WithLocalURL()}, "http://localhost:11434"},
+		{"WithBaseURL overrides", []Option{WithBaseURL("https://example.test")}, "https://example.test"},
+		{"WithBaseURL empty string keeps default", []Option{WithBaseURL("")}, "https://ollama.com"},
+		{"last option wins", []Option{WithBaseURL("https://example.test"), WithLocalURL()}, "http://localhost:11434"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			opts := append(tt.opts, WithNoRateLimit())
-			c := NewClient(tt.cfg, opts...).(*Client)
+			c := NewClient(Config{}, opts...).(*Client)
 			if c.baseURL != tt.want {
 				t.Errorf("baseURL = %q, want %q", c.baseURL, tt.want)
 			}
@@ -57,7 +57,7 @@ func TestOllamaOptions_BaseURL(t *testing.T) {
 }
 
 func TestGetContextWindowSize_EffectiveWindow(t *testing.T) {
-	if got := NewClient(Config{ContextSize: 8192}).GetContextWindowSize(); got != 8192 {
+	if got := NewClient(Config{}, WithContextSize(8192)).GetContextWindowSize(); got != 8192 {
 		t.Errorf("GetContextWindowSize() = %d, want 8192", got)
 	}
 	if got := NewClient(Config{}).GetContextWindowSize(); got != Model_Gemma4_31B.GetDefaultContextWindow() {

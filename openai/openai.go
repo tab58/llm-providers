@@ -26,7 +26,6 @@ type Config struct {
 
 type options struct {
 	noRateLimit bool
-	baseURL     string
 }
 
 // Option is a functional option for configuring the OpenAI client.
@@ -39,13 +38,6 @@ func WithNoRateLimit() Option {
 	}
 }
 
-// WithBaseURL overrides the API endpoint (e.g. a proxy or gateway).
-func WithBaseURL(url string) Option {
-	return func(o *options) {
-		o.baseURL = url
-	}
-}
-
 // NewClient creates an OpenAI LLM client.
 func NewClient(cfg Config, opts ...Option) common.LLM {
 	model := cfg.Model
@@ -54,16 +46,14 @@ func NewClient(cfg Config, opts ...Option) common.LLM {
 	}
 
 	// apply functional options
-	o := options{
-		baseURL: openaiBaseURL,
-	}
+	o := options{}
 	for _, opt := range opts {
 		opt(&o)
 	}
 
 	client := openai.NewClient(
 		option.WithAPIKey(cfg.APIKey),
-		option.WithBaseURL(o.baseURL),
+		option.WithBaseURL(openaiBaseURL),
 	)
 
 	raw := &Client{&openai_compat.Client{

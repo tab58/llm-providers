@@ -33,7 +33,9 @@ type Option func(*options)
 // WithBaseURL overrides the API endpoint (e.g. a proxy or gateway).
 func WithBaseURL(url string) Option {
 	return func(o *options) {
-		o.baseURL = url
+		if url != "" {
+			o.baseURL = url
+		}
 	}
 }
 

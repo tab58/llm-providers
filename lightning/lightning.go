@@ -22,14 +22,14 @@ type Client struct {
 // Config holds configuration for connecting to the Lightning.ai API.
 type Config struct {
 	APIKey string
-	// BaseURL points at a deployment-specific endpoint when set. Empty uses
-	// the shared Lightning.ai Model API endpoint.
-	BaseURL string
-	Model   Model
+	Model  Model
 }
 
 type options struct {
 	noRateLimit bool
+	// BaseURL points at a deployment-specific endpoint when set. Empty uses
+	// the shared Lightning.ai Model API endpoint.
+	baseURL string
 }
 
 // Option is a functional option for configuring the Lightning client.
@@ -42,6 +42,16 @@ func WithNoRateLimit() Option {
 	}
 }
 
+// WithBaseURL sets a custom base URL for the Lightning client. This is useful
+// for testing or for connecting to a deployment-specific endpoint.
+func WithBaseURL(baseURL string) Option {
+	return func(o *options) {
+		if baseURL != "" {
+			o.baseURL = baseURL
+		}
+	}
+}
+
 // NewClient creates a Lightning.ai LLM client using the
 // OpenAI-compatible API. Requests rejected with HTTP 429 are retried with
 // exponential backoff.
@@ -51,21 +61,20 @@ func NewClient(cfg Config, opts ...Option) common.LLM {
 		model = Model_Gemma4_31B
 	}
 
-	var o options
+	// apply functional options
+	o := options{
+		baseURL: lightningBaseURL,
+	}
 	for _, opt := range opts {
 		opt(&o)
 	}
 
-	baseURL := cfg.BaseURL
-	if baseURL == "" {
-		baseURL = lightningBaseURL
-	}
 	client := openai.NewClient(
 		option.WithAPIKey(cfg.APIKey),
-		option.WithBaseURL(baseURL),
+		option.WithBaseURL(o.baseURL),
 	)
 	raw := &Client{&openai_compat.Client{
-		Name:           "lightning",
+		Name:           string(common.ProviderLightning),
 		Client:         &client,
 		Model:          model,
 		RetryRateLimit: true,

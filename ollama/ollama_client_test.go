@@ -15,7 +15,7 @@ func newOllamaTestClient(t *testing.T, handler http.HandlerFunc) common.LLM {
 	t.Helper()
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
-	return NewClient(Config{BaseURL: srv.URL})
+	return NewClient(Config{}, WithBaseURL(srv.URL))
 }
 
 func TestOllama_SendSyncMessage(t *testing.T) {

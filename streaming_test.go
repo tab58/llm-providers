@@ -128,7 +128,7 @@ func TestOllama_StreamingToolCalls(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	ollama := ollama.NewClient(ollama.Config{BaseURL: srv.URL})
+	ollama := ollama.NewClient(ollama.Config{}, ollama.WithBaseURL(srv.URL))
 
 	events := make(chan common.StreamEvent, 32)
 	errCh := make(chan error, 1)

@@ -23,8 +23,6 @@ const OLLAMA_CLOUD_BASE_URL = "https://ollama.com/"
 // ollamaLocalBaseURL is the default address of a locally running Ollama server.
 const ollamaLocalBaseURL = "http://localhost:11434"
 
-const MAX_CONCURRENT_REQUESTS = 3
-
 // Client implements the LLM interface using Client's native /api/* endpoints.
 type Client struct {
 	baseURL     string
@@ -37,12 +35,8 @@ type Client struct {
 
 // Config holds configuration for connecting to an Ollama server.
 type Config struct {
-	BaseURL     string
-	APIKey      string
-	Model       Model
-	ContextSize int64 // Ollama num_ctx: total context window (input+output). 0 uses model default.
-	// Logger receives request/response diagnostics. Nil disables them.
-	Logger logger.Logger
+	APIKey string
+	Model  Model
 }
 
 // logf writes a diagnostic line when a Logger is configured.
@@ -53,17 +47,54 @@ func (o *Client) logf(format string, args ...any) {
 }
 
 type configOptions struct {
-	noRateLimit bool
-	baseURL     string
+	noRateLimit    bool
+	maxConcurrency int
+	baseURL        string
+	// Ollama num_ctx: total context window (input+output). 0 uses model default.
+	contextSize int64
+	// Logger receives request/response diagnostics. Nil disables them.
+	logger logger.Logger
 }
 
 // Option is a functional option for configuring the Ollama client.
 type Option func(*configOptions)
 
+func WithConcurrencyLimit(limit int) Option {
+	return func(o *configOptions) {
+		if limit <= 0 {
+			o.noRateLimit = true
+		} else {
+			o.noRateLimit = false
+			o.maxConcurrency = limit
+		}
+	}
+}
+
 // WithNoRateLimit disables the concurrency limit for the Ollama client.
 func WithNoRateLimit() Option {
 	return func(o *configOptions) {
 		o.noRateLimit = true
+	}
+}
+
+func WithContextSize(size int64) Option {
+	return func(o *configOptions) {
+		o.contextSize = size
+	}
+}
+
+func WithLogger(log logger.Logger) Option {
+	return func(o *configOptions) {
+		o.logger = log
+	}
+}
+
+// WithBaseURL sets the base URL for the Ollama client. This is useful for testing or using a self-hosted Ollama server.
+func WithBaseURL(baseURL string) Option {
+	return func(o *configOptions) {
+		if baseURL != "" {
+			o.baseURL = baseURL
+		}
 	}
 }
 
@@ -82,32 +113,26 @@ func NewClient(cfg Config, opts ...Option) common.LLM {
 		model = Model_Gemma4_31B
 	}
 
-	var o configOptions
+	o := configOptions{
+		baseURL: OLLAMA_CLOUD_BASE_URL,
+	}
 	for _, opt := range opts {
 		opt(&o)
 	}
 
-	url := cfg.BaseURL
-	if o.baseURL != "" {
-		url = o.baseURL
-	}
-	if url == "" {
-		url = OLLAMA_CLOUD_BASE_URL
-	}
-
 	raw := &Client{
-		baseURL:     strings.TrimSuffix(url, "/"),
+		baseURL:     strings.TrimSuffix(o.baseURL, "/"),
 		apiKey:      cfg.APIKey,
 		client:      http.DefaultClient,
 		model:       model,
-		contextSize: cfg.ContextSize,
-		log:         cfg.Logger,
+		contextSize: o.contextSize,
+		log:         o.logger,
 	}
 	if o.noRateLimit {
 		return raw
 	}
 
-	return ratelimit.Wrap(raw, ratelimit.NewSemaphore(MAX_CONCURRENT_REQUESTS), ratelimit.CostPerRequest)
+	return ratelimit.Wrap(raw, ratelimit.NewSemaphore(o.maxConcurrency), ratelimit.CostPerRequest)
 }
 
 func (c *Client) ProviderName() common.Provider {

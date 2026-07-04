@@ -5,6 +5,8 @@ import (
 	"errors"
 )
 
+var ErrUnknownProvider = errors.New("unknown provider")
+
 var ErrNotSupported = errors.New("operation not supported by this provider")
 
 type Provider string
