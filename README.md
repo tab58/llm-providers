@@ -31,8 +31,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/tab58/llm-providers/providers/anthropic"
-	"github.com/tab58/llm-providers/providers/common"
+	"github.com/tab58/llm-providers/anthropic"
+	"github.com/tab58/llm-providers/common"
 )
 
 func main() {
@@ -115,9 +115,9 @@ Every client satisfies `common.LLM`, so provider choice is a construction detail
 
 ```go
 import (
-	"github.com/tab58/llm-providers/providers/common"
-	"github.com/tab58/llm-providers/providers/ollama"
-	"github.com/tab58/llm-providers/providers/openai"
+	"github.com/tab58/llm-providers/common"
+	"github.com/tab58/llm-providers/ollama"
+	"github.com/tab58/llm-providers/openai"
 )
 
 var llm common.LLM
@@ -136,24 +136,35 @@ default:
 
 | Provider   | Package                | Notes                                                        |
 | ---------- | ---------------------- | ------------------------------------------------------------ |
-| Anthropic  | `providers/anthropic`  | Native SDK; token counting via dedicated API endpoint         |
-| OpenAI     | `providers/openai`     | Chat completions API; token counts estimated                  |
-| Cerebras   | `providers/cerebras`   | OpenAI-compatible endpoint                                    |
-| OpenRouter | `providers/openrouter` | OpenAI-compatible endpoint                                    |
-| Ollama     | `providers/ollama`     | Local or cloud; configurable `ContextSize` and logger         |
-| Lightning  | `providers/lightning`  | OpenAI-compatible endpoint; custom `BaseURL`                  |
+| Anthropic  | `anthropic`  | Native SDK; token counting via dedicated API endpoint         |
+| OpenAI     | `openai`     | Chat completions API; token counts estimated                  |
+| Cerebras   | `cerebras`   | OpenAI-compatible endpoint                                    |
+| OpenRouter | `openrouter` | OpenAI-compatible endpoint                                    |
+| Ollama     | `ollama`     | Local or cloud; configurable `ContextSize` and logger         |
+| Lightning  | `lightning`  | OpenAI-compatible endpoint; custom `BaseURL`                  |
 
-The OpenAI-compatible providers share one implementation (`providers/openai_compat`) and differ only in configuration.
+The OpenAI-compatible providers share one implementation (`openai_compat`) and differ only in configuration.
 
 ## Rate limiting
 
-Clients with rate limiting create a default token-bucket limiter (10K input tokens/min, max 10 concurrent calls). Disable it with the provider's option:
+All client-side rate limiting lives in one place: `ratelimit`. Each provider's `NewClient` returns a `common.LLM` already wrapped with its default limiter (e.g. Anthropic: 10K input tokens/min, max 10 concurrent calls). Disable it with the provider's option:
 
 ```go
 client := anthropic.NewClient(cfg, anthropic.WithNoRateLimit())
 ```
 
-The limiter itself lives in `utils.TokenBucket` if you want custom rates.
+To apply a custom limit, disable the default and wrap yourself:
+
+```go
+raw := anthropic.NewClient(cfg, anthropic.WithNoRateLimit())
+llm := ratelimit.Wrap(raw, ratelimit.NewTokenBucket(ratelimit.TokenBucketConfig{
+	Rate:           1000.0 / 60.0,
+	BurstSize:      1000,
+	MaxConcurrency: 5,
+}), ratelimit.CostByTokenCount)
+```
+
+`ratelimit.Wrap` guards the three send methods of any `common.LLM`; `CountTokens`, `ListModels`, and the getters pass through unlimited. Limiters: `TokenBucket` (token rate + concurrency) and `Semaphore` (concurrency only), or any custom `ratelimit.Limiter`. Cost strategies: `CostPerRequest` (one unit per call) and `CostByTokenCount` (estimated input tokens via the client's `CountTokens`).
 
 ## The `LLM` interface
 

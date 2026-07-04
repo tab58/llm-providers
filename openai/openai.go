@@ -1,0 +1,68 @@
+package openai
+
+import (
+	"github.com/tab58/llm-providers/common"
+	"github.com/tab58/llm-providers/openai_compat"
+	"github.com/tab58/llm-providers/ratelimit"
+
+	"github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/option"
+)
+
+// Client implements the LLM interface using the Client API.
+type Client struct {
+	*openai_compat.Client
+}
+
+// Config holds configuration for connecting to the OpenAI API.
+type Config struct {
+	APIKey string
+	Model  Model
+}
+
+type options struct {
+	noRateLimit bool
+}
+
+// Option is a functional option for configuring the OpenAI client.
+type Option func(*options)
+
+// WithNoRateLimit disables rate limiting for the OpenAI client.
+func WithNoRateLimit() Option {
+	return func(o *options) {
+		o.noRateLimit = true
+	}
+}
+
+// NewClient creates an OpenAI LLM client.
+func NewClient(cfg Config, opts ...Option) common.LLM {
+	client := openai.NewClient(
+		option.WithAPIKey(cfg.APIKey),
+	)
+	model := cfg.Model
+	if model == nil {
+		model = Model_GPT5_4
+	}
+
+	var o options
+	for _, opt := range opts {
+		opt(&o)
+	}
+
+	raw := &Client{&openai_compat.Client{
+		Name:                   "openai",
+		Client:                 &client,
+		Model:                  model,
+		UseMaxCompletionTokens: true,
+	}}
+	if o.noRateLimit {
+		return raw
+	}
+
+	limiter := ratelimit.NewTokenBucket(ratelimit.TokenBucketConfig{
+		Rate:           10_000.0 / 60.0, // 10K input tokens per minute
+		BurstSize:      10_000,
+		MaxConcurrency: 10,
+	})
+	return ratelimit.Wrap(raw, limiter, ratelimit.CostByTokenCount)
+}

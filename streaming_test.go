@@ -8,9 +8,9 @@ import (
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
-	"github.com/tab58/llm-providers/providers/common"
-	"github.com/tab58/llm-providers/providers/ollama"
-	"github.com/tab58/llm-providers/providers/openai_compat"
+	"github.com/tab58/llm-providers/common"
+	"github.com/tab58/llm-providers/ollama"
+	"github.com/tab58/llm-providers/openai_compat"
 	"github.com/tab58/llm-providers/testutils"
 )
 

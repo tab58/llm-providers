@@ -3,7 +3,7 @@ package testutils
 import (
 	"testing"
 
-	"github.com/tab58/llm-providers/providers/common"
+	"github.com/tab58/llm-providers/common"
 )
 
 // collectEvents drains a stream of events, returning the text deltas and the

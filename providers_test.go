@@ -3,13 +3,13 @@ package provider
 import (
 	"testing"
 
-	"github.com/tab58/llm-providers/providers/anthropic"
-	"github.com/tab58/llm-providers/providers/cerebras"
-	"github.com/tab58/llm-providers/providers/common"
-	"github.com/tab58/llm-providers/providers/lightning"
-	"github.com/tab58/llm-providers/providers/ollama"
-	"github.com/tab58/llm-providers/providers/openai"
-	"github.com/tab58/llm-providers/providers/openrouter"
+	"github.com/tab58/llm-providers/anthropic"
+	"github.com/tab58/llm-providers/cerebras"
+	"github.com/tab58/llm-providers/common"
+	"github.com/tab58/llm-providers/lightning"
+	"github.com/tab58/llm-providers/ollama"
+	"github.com/tab58/llm-providers/openai"
+	"github.com/tab58/llm-providers/openrouter"
 )
 
 func TestConstructorDefaults(t *testing.T) {
