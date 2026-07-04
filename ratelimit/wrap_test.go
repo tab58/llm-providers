@@ -46,6 +46,10 @@ type fakeLLM struct {
 	sendCalls      int
 }
 
+func (f *fakeLLM) ProviderName() common.Provider {
+	return common.Provider("")
+}
+
 func (f *fakeLLM) SendSyncMessage(_ context.Context, _ common.CompletionRequest) (common.CompletionResponse, error) {
 	f.sendCalls++
 	return common.CompletionResponse{ID: "sync"}, f.sendErr

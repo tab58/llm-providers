@@ -172,9 +172,15 @@ func TestOpenAICompat_ListModels(t *testing.T) {
 	}
 }
 
+// testLLM adds the ProviderName method Client itself deliberately omits
+// (embedders like cerebras/openrouter define it), satisfying common.LLM.
+type testLLM struct{ *Client }
+
+func (testLLM) ProviderName() common.Provider { return "test" }
+
 func TestOpenAICompat_RateLimitAcquireRelease(t *testing.T) {
 	compat := newCompatTestClient(t, respondCompletion(t))
-	limited := ratelimit.Wrap(compat, ratelimit.NewTokenBucket(ratelimit.TokenBucketConfig{
+	limited := ratelimit.Wrap(testLLM{compat}, ratelimit.NewTokenBucket(ratelimit.TokenBucketConfig{
 		Rate:           100_000,
 		BurstSize:      100_000,
 		MaxConcurrency: 1,

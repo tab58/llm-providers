@@ -7,7 +7,21 @@ import (
 
 var ErrNotSupported = errors.New("operation not supported by this provider")
 
+type Provider string
+
+const (
+	ProviderAnthropic  Provider = "anthropic"
+	ProviderCerebras   Provider = "cerebras"
+	ProviderLightning  Provider = "lightning"
+	ProviderOllama     Provider = "ollama"
+	ProviderOpenAI     Provider = "openai"
+	ProviderOpenRouter Provider = "openrouter"
+)
+
 type LLM interface {
+	// ProviderName returns the provider name for this LLM implementation.
+	ProviderName() Provider
+
 	// SendSyncMessage sends a completion request and returns the full response.
 	SendSyncMessage(ctx context.Context, req CompletionRequest) (CompletionResponse, error)
 

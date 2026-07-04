@@ -42,3 +42,7 @@ func NewClient(cfg Config) common.LLM {
 		Model:  model,
 	}}
 }
+
+func (c *Client) ProviderName() common.Provider {
+	return common.ProviderOpenRouter
+}

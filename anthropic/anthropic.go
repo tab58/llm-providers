@@ -14,10 +14,12 @@ import (
 	"github.com/anthropics/anthropic-sdk-go/shared/constant"
 )
 
-// nonStreamingCap is the largest max_tokens the SDK accepts on a
-// non-streaming request: its guard rejects requests expected to take longer
-// than 10 minutes, scaled at 128000 tokens per hour.
-const nonStreamingCap int64 = 128000 / 6
+const (
+	// nonStreamingCap is the largest max_tokens the SDK accepts on a
+	// non-streaming request: its guard rejects requests expected to take longer
+	// than 10 minutes, scaled at 128000 tokens per hour.
+	nonStreamingCap int64 = 128000 / 6
+)
 
 // maxNonStreamingTokens returns the largest max_tokens the SDK permits for a
 // non-streaming request to the given model, honoring the SDK's per-model
@@ -84,6 +86,10 @@ func NewClient(cfg Config, opts ...Option) common.LLM {
 		MaxConcurrency: 10,              // max 10 calls concurrent
 	})
 	return ratelimit.Wrap(raw, limiter, ratelimit.CostByTokenCount)
+}
+
+func (a *Client) ProviderName() common.Provider {
+	return common.ProviderAnthropic
 }
 
 func (a *Client) SendSyncMessage(ctx context.Context, req common.CompletionRequest) (common.CompletionResponse, error) {

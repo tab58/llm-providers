@@ -63,6 +63,10 @@ type limitedLLM struct {
 
 var _ common.LLM = (*limitedLLM)(nil)
 
+func (w *limitedLLM) ProviderName() common.Provider {
+	return common.Provider("")
+}
+
 // acquire computes the request cost and takes the limiter. On success the
 // caller must call w.limiter.Release when the work is done.
 func (w *limitedLLM) acquire(ctx context.Context, req common.CompletionRequest) error {

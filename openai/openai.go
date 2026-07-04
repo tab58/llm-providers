@@ -66,3 +66,7 @@ func NewClient(cfg Config, opts ...Option) common.LLM {
 	})
 	return ratelimit.Wrap(raw, limiter, ratelimit.CostByTokenCount)
 }
+
+func (c *Client) ProviderName() common.Provider {
+	return common.ProviderOpenAI
+}

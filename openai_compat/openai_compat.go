@@ -61,6 +61,10 @@ func (c *Client) maxAttempts() int {
 	return 1
 }
 
+// func (c *Client) ProviderName() common.Provider {
+// 	return common.Provider("")
+// }
+
 func (c *Client) SendSyncMessage(ctx context.Context, req common.CompletionRequest) (common.CompletionResponse, error) {
 	return c.send(ctx, req)
 }

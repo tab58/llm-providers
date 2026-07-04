@@ -11,8 +11,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/tab58/llm-providers/logger"
 	"github.com/tab58/llm-providers/common"
+	"github.com/tab58/llm-providers/logger"
 	"github.com/tab58/llm-providers/ratelimit"
 )
 
@@ -93,6 +93,10 @@ func NewClient(cfg Config, opts ...Option) common.LLM {
 	}
 
 	return ratelimit.Wrap(raw, ratelimit.NewSemaphore(MAX_CONCURRENT_REQUESTS), ratelimit.CostPerRequest)
+}
+
+func (c *Client) ProviderName() common.Provider {
+	return common.ProviderOllama
 }
 
 // -- internal request/response types --

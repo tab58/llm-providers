@@ -71,3 +71,7 @@ func NewClient(cfg Config, opts ...Option) common.LLM {
 	})
 	return ratelimit.Wrap(raw, limiter, ratelimit.CostPerRequest)
 }
+
+func (c *Client) ProviderName() common.Provider {
+	return common.ProviderLightning
+}
