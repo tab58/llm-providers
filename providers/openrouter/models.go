@@ -6,9 +6,8 @@ type Model = common.Model
 
 var (
 	Model_Gemma4_31B Model = common.ModelDefinition{
-		Name:                 "google/gemma-4-31b-it",
-		MaxTokens:            32_768,
-		ContextWindowSize:    262_144,
-		DefaultContextWindow: 262_144,
+		Name:              "google/gemma-4-31b-it",
+		MaxTokens:         32_768,
+		ContextWindowSize: 262_144,
 	}
 )

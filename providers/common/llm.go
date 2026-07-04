@@ -7,15 +7,6 @@ import (
 
 var ErrNotSupported = errors.New("operation not supported by this provider")
 
-const (
-	MaxTokensStdResponse int64 = 32768
-)
-
-// openAICompat implements the LLM interface for any OpenAI-compatible chat
-// completions API. Provider types (OpenAI, Cerebras, Lightning, OpenRouter)
-// embed it and differ only in configuration.
-const ContextWindowDefault = 128_000
-
 type LLM interface {
 	// SendSyncMessage sends a completion request and returns the full response.
 	SendSyncMessage(ctx context.Context, req CompletionRequest) (CompletionResponse, error)
@@ -51,14 +42,24 @@ type Model interface {
 
 	// GetContextWindowSize returns the model's total context window in tokens.
 	GetContextWindowSize() int
+
+	// GetDefaultContextWindow returns the context window to run at by default
+	// (e.g. Ollama's num_ctx), which may be smaller than the model's maximum.
+	GetDefaultContextWindow() int
 }
 
 // ModelDefinition represents a model available from a provider.
 // Implementations of the Model interface can be used to define models for specific providers.
 type ModelDefinition struct {
-	Name                 string
-	MaxTokens            int
-	ContextWindowSize    int
+	Name string
+	// MaxTokens is the model's maximum output tokens per request.
+	MaxTokens int
+	// ContextWindowSize is the model's maximum context window in tokens.
+	ContextWindowSize int
+	// DefaultContextWindow is the context window to run at by default, for
+	// providers that size server-side context per request (e.g. Ollama's
+	// num_ctx). Set it below ContextWindowSize to bound memory use; leave it
+	// 0 to run at the full ContextWindowSize. Most providers ignore it.
 	DefaultContextWindow int
 }
 
@@ -75,4 +76,11 @@ func (m ModelDefinition) GetContextWindowSize() int {
 		return m.ContextWindowSize
 	}
 	return m.DefaultContextWindow
+}
+
+func (m ModelDefinition) GetDefaultContextWindow() int {
+	if m.DefaultContextWindow > 0 {
+		return m.DefaultContextWindow
+	}
+	return m.ContextWindowSize
 }

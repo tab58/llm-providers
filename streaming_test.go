@@ -38,7 +38,7 @@ func TestOpenAICompat_StreamingAccumulatesToolCalls(t *testing.T) {
 	defer srv.Close()
 
 	client := openai.NewClient(option.WithAPIKey("test"), option.WithBaseURL(srv.URL))
-	compat := &openai_compat.Client{Name: "test", Client: &client}
+	compat := &openai_compat.Client{Name: "test", Client: &client, Model: common.ModelDefinition{Name: "test-model", MaxTokens: 1024}}
 
 	events := make(chan common.StreamEvent, 32)
 	errCh := make(chan error, 1)
@@ -87,7 +87,7 @@ func TestOpenAICompat_StreamingClosesChannelOnError(t *testing.T) {
 	defer srv.Close()
 
 	client := openai.NewClient(option.WithAPIKey("test"), option.WithBaseURL(srv.URL))
-	compat := &openai_compat.Client{Name: "test", Client: &client}
+	compat := &openai_compat.Client{Name: "test", Client: &client, Model: common.ModelDefinition{Name: "test-model", MaxTokens: 1024}}
 
 	events := make(chan common.StreamEvent, 32)
 	err := compat.SendStreamingMessage(context.Background(), common.CompletionRequest{

@@ -9,27 +9,27 @@ var (
 		Name:                 "qwen3.5:9b",
 		MaxTokens:            32_768,
 		ContextWindowSize:    262_144,
-		DefaultContextWindow: common.ContextWindowDefault,
+		DefaultContextWindow: 32_768,
 	}
 
 	Model_Qwen3_5_35B Model = common.ModelDefinition{
 		Name:                 "qwen3.5:35b",
 		MaxTokens:            32_768,
 		ContextWindowSize:    262_144,
-		DefaultContextWindow: common.ContextWindowDefault,
+		DefaultContextWindow: 32_768,
 	}
 
 	Model_Qwen3_5_122B Model = common.ModelDefinition{
 		Name:                 "qwen3.5:122b",
 		MaxTokens:            32_768,
 		ContextWindowSize:    262_144,
-		DefaultContextWindow: common.ContextWindowDefault,
+		DefaultContextWindow: 32_768,
 	}
 
 	Model_Gemma4_31B Model = common.ModelDefinition{
 		Name:                 "gemma4:31b",
 		MaxTokens:            32_768,
 		ContextWindowSize:    262_144,
-		DefaultContextWindow: 262_144,
+		DefaultContextWindow: 32_768,
 	}
 )

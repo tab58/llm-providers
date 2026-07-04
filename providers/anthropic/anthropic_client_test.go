@@ -199,7 +199,7 @@ func TestAnthropic_SyncCapsMaxTokens(t *testing.T) {
 		maxTokens     int64
 		wantMaxTokens int64
 	}{
-		// Package default 32768 exceeds the SDK's 10-minute guard
+		// Model default 128000 exceeds the SDK's 10-minute guard
 		// (128000/6 = 21333), which rejects the request client-side.
 		{"default capped to 10-minute bound", "claude-sonnet-4-6", 0, 21333},
 		{"explicit over bound capped", "claude-sonnet-4-6", 30000, 21333},
@@ -278,8 +278,9 @@ func TestAnthropic_StreamingDoesNotCapMaxTokens(t *testing.T) {
 	if err := json.Unmarshal(requestBody, &wire); err != nil {
 		t.Fatalf("unmarshal request body: %v", err)
 	}
-	if wire.MaxTokens != common.MaxTokensStdResponse {
-		t.Errorf("wire max_tokens = %d, want uncapped default %d", wire.MaxTokens, common.MaxTokensStdResponse)
+	wantMax := int64(Model_ClaudeSonnet4_6.GetMaxTokens())
+	if wire.MaxTokens != wantMax {
+		t.Errorf("wire max_tokens = %d, want uncapped model default %d", wire.MaxTokens, wantMax)
 	}
 }
 

@@ -30,6 +30,7 @@ type Client struct {
 	client      *http.Client
 	rateLimiter *utils.Semaphore
 	model       Model
+	contextSize int64
 	log         logger.Logger
 }
 
@@ -68,6 +69,7 @@ func NewClient(cfg Config) *Client {
 		client:      http.DefaultClient,
 		rateLimiter: utils.NewSemaphore(MAX_CONCURRENT_REQUESTS),
 		model:       model,
+		contextSize: cfg.ContextSize,
 		log:         cfg.Logger,
 	}
 }
@@ -299,8 +301,17 @@ func (o *Client) GetCurrentModel() string {
 	return o.model.GetName()
 }
 
+// effectiveContextSize is the context window the server actually runs at:
+// Config.ContextSize when set, else the model's default operating window.
+func (o *Client) effectiveContextSize() int64 {
+	if o.contextSize > 0 {
+		return o.contextSize
+	}
+	return int64(o.model.GetDefaultContextWindow())
+}
+
 func (o *Client) GetContextWindowSize() int {
-	return o.model.GetContextWindowSize()
+	return int(o.effectiveContextSize())
 }
 
 // CountTokens is not supported by Ollama. Returns ErrNotSupported.
@@ -389,8 +400,10 @@ func (o *Client) ollamaOptions(req common.CompletionRequest) map[string]any {
 	if req.MaxTokens > 0 {
 		opts["num_predict"] = req.MaxTokens
 	}
-	contextSize := o.model.GetContextWindowSize()
-	if contextSize > 0 {
+	// num_ctx sizes the server's KV cache, so default to the model's
+	// DefaultContextWindow rather than its full context window (256K+ would
+	// exhaust memory on typical hardware). Config.ContextSize overrides.
+	if contextSize := o.effectiveContextSize(); contextSize > 0 {
 		opts["num_ctx"] = contextSize
 	}
 	if len(opts) == 0 {

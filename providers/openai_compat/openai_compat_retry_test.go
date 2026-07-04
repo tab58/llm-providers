@@ -46,6 +46,7 @@ func newRetryTestCompat(t *testing.T, reject429 int32, respond http.HandlerFunc)
 	return &Client{
 		Name:           "test",
 		Client:         &client,
+		Model:          common.ModelDefinition{Name: "test-model", MaxTokens: 1024},
 		RetryRateLimit: true,
 		BaseBackoff:    time.Millisecond,
 		MaxBackoff:     5 * time.Millisecond,

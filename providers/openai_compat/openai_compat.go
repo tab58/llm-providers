@@ -26,8 +26,10 @@ type Model = common.Model
 
 type Client struct {
 	// Name identifies the provider in error messages and logs.
-	Name        string
-	Client      *openai.Client
+	Name   string
+	Client *openai.Client
+	// Model is required; it supplies the default max tokens and the
+	// context window size.
 	Model       Model
 	RateLimiter *utils.TokenBucket
 	// TokenCostLimit acquires estimated input tokens from the rate limiter
@@ -293,7 +295,7 @@ func (c *Client) ListModels(ctx context.Context) ([]common.ModelInfo, error) {
 func (c *Client) buildParams(req common.CompletionRequest) (openai.ChatCompletionNewParams, error) {
 	maxTokens := req.MaxTokens
 	if maxTokens == 0 {
-		maxTokens = common.MaxTokensStdResponse
+		maxTokens = int64(c.Model.GetMaxTokens())
 	}
 
 	msgs := toOpenAIMessages(req.Messages)

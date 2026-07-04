@@ -299,7 +299,7 @@ func (a *Client) ListModels(ctx context.Context) ([]common.ModelInfo, error) {
 func (a *Client) buildParams(req common.CompletionRequest) (anthropicSDK.MessageNewParams, error) {
 	maxTokens := req.MaxTokens
 	if maxTokens == 0 {
-		maxTokens = common.MaxTokensStdResponse
+		maxTokens = int64(a.model.GetMaxTokens())
 	}
 
 	params := anthropicSDK.MessageNewParams{

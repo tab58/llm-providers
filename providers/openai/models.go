@@ -9,16 +9,14 @@ type Model = common.Model
 
 var (
 	Model_GPT5_4 Model = common.ModelDefinition{
-		Name:                 openai.ChatModelGPT5_4,
-		MaxTokens:            128_000,
-		ContextWindowSize:    1_050_000,
-		DefaultContextWindow: 1_050_000,
+		Name:              openai.ChatModelGPT5_4,
+		MaxTokens:         128_000,
+		ContextWindowSize: 1_050_000,
 	}
 
 	Model_GPT5_4Mini Model = common.ModelDefinition{
-		Name:                 openai.ChatModelGPT5_4Mini,
-		MaxTokens:            128_000,
-		ContextWindowSize:    400_000,
-		DefaultContextWindow: 400_000,
+		Name:              openai.ChatModelGPT5_4Mini,
+		MaxTokens:         128_000,
+		ContextWindowSize: 400_000,
 	}
 )
