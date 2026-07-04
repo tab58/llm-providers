@@ -9,15 +9,21 @@ import (
 	"github.com/openai/openai-go/v3/option"
 )
 
+const (
+	// lightningBaseURL is the shared Lightning.ai Model API endpoint.
+	lightningBaseURL = "https://lightning.ai/api/v1"
+)
+
 // Client implements the LLM interface using Client.ai's OpenAI-compatible API.
 type Client struct {
 	*openai_compat.Client
 }
 
 // Config holds configuration for connecting to the Lightning.ai API.
-// BaseURL is required: Lightning.ai endpoints are deployment-specific.
 type Config struct {
-	APIKey  string
+	APIKey string
+	// BaseURL points at a deployment-specific endpoint when set. Empty uses
+	// the shared Lightning.ai Model API endpoint.
 	BaseURL string
 	Model   Model
 }
@@ -40,10 +46,6 @@ func WithNoRateLimit() Option {
 // OpenAI-compatible API. Requests rejected with HTTP 429 are retried with
 // exponential backoff.
 func NewClient(cfg Config, opts ...Option) common.LLM {
-	client := openai.NewClient(
-		option.WithAPIKey(cfg.APIKey),
-		option.WithBaseURL(cfg.BaseURL),
-	)
 	model := cfg.Model
 	if model == nil {
 		model = Model_Gemma4_31B
@@ -54,6 +56,14 @@ func NewClient(cfg Config, opts ...Option) common.LLM {
 		opt(&o)
 	}
 
+	baseURL := cfg.BaseURL
+	if baseURL == "" {
+		baseURL = lightningBaseURL
+	}
+	client := openai.NewClient(
+		option.WithAPIKey(cfg.APIKey),
+		option.WithBaseURL(baseURL),
+	)
 	raw := &Client{&openai_compat.Client{
 		Name:           "lightning",
 		Client:         &client,

@@ -20,6 +20,9 @@ var thinkBlockRe = regexp.MustCompile(`(?s)<think>.*?</think>\s*`)
 
 const OLLAMA_CLOUD_BASE_URL = "https://ollama.com/"
 
+// ollamaLocalBaseURL is the default address of a locally running Ollama server.
+const ollamaLocalBaseURL = "http://localhost:11434"
+
 const MAX_CONCURRENT_REQUESTS = 3
 
 // Client implements the LLM interface using Client's native /api/* endpoints.
@@ -51,6 +54,7 @@ func (o *Client) logf(format string, args ...any) {
 
 type configOptions struct {
 	noRateLimit bool
+	baseURL     string
 }
 
 // Option is a functional option for configuring the Ollama client.
@@ -63,6 +67,14 @@ func WithNoRateLimit() Option {
 	}
 }
 
+// WithLocalURL points the client at a locally running Ollama server instead
+// of Ollama Cloud. Takes precedence over Config.BaseURL.
+func WithLocalURL() Option {
+	return func(o *configOptions) {
+		o.baseURL = ollamaLocalBaseURL
+	}
+}
+
 // NewClient creates an Ollama LLM client using the native Ollama API.
 func NewClient(cfg Config, opts ...Option) common.LLM {
 	model := cfg.Model
@@ -70,14 +82,17 @@ func NewClient(cfg Config, opts ...Option) common.LLM {
 		model = Model_Gemma4_31B
 	}
 
-	url := cfg.BaseURL
-	if url == "" {
-		url = OLLAMA_CLOUD_BASE_URL
-	}
-
 	var o configOptions
 	for _, opt := range opts {
 		opt(&o)
+	}
+
+	url := cfg.BaseURL
+	if o.baseURL != "" {
+		url = o.baseURL
+	}
+	if url == "" {
+		url = OLLAMA_CLOUD_BASE_URL
 	}
 
 	raw := &Client{

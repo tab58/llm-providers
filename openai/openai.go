@@ -9,6 +9,10 @@ import (
 	"github.com/openai/openai-go/v3/option"
 )
 
+const (
+	openaiBaseURL = "https://api.openai.com/v1"
+)
+
 // Client implements the LLM interface using the Client API.
 type Client struct {
 	*openai_compat.Client
@@ -22,6 +26,7 @@ type Config struct {
 
 type options struct {
 	noRateLimit bool
+	baseURL     string
 }
 
 // Option is a functional option for configuring the OpenAI client.
@@ -34,20 +39,32 @@ func WithNoRateLimit() Option {
 	}
 }
 
+// WithBaseURL overrides the API endpoint (e.g. a proxy or gateway).
+func WithBaseURL(url string) Option {
+	return func(o *options) {
+		o.baseURL = url
+	}
+}
+
 // NewClient creates an OpenAI LLM client.
 func NewClient(cfg Config, opts ...Option) common.LLM {
-	client := openai.NewClient(
-		option.WithAPIKey(cfg.APIKey),
-	)
 	model := cfg.Model
 	if model == nil {
 		model = Model_GPT5_4
 	}
 
-	var o options
+	// apply functional options
+	o := options{
+		baseURL: openaiBaseURL,
+	}
 	for _, opt := range opts {
 		opt(&o)
 	}
+
+	client := openai.NewClient(
+		option.WithAPIKey(cfg.APIKey),
+		option.WithBaseURL(o.baseURL),
+	)
 
 	raw := &Client{&openai_compat.Client{
 		Name:                   "openai",

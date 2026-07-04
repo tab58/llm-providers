@@ -32,6 +32,30 @@ func TestOllamaOptions_NumCtx(t *testing.T) {
 	}
 }
 
+func TestOllamaOptions_BaseURL(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  Config
+		opts []Option
+		want string
+	}{
+		{"defaults to Ollama Cloud", Config{}, nil, "https://ollama.com"},
+		{"WithLocalURL uses local server", Config{}, []Option{WithLocalURL()}, "http://localhost:11434"},
+		{"WithLocalURL wins over explicit BaseURL", Config{BaseURL: "https://example.test"}, []Option{WithLocalURL()}, "http://localhost:11434"},
+		{"explicit BaseURL respected", Config{BaseURL: "https://example.test"}, nil, "https://example.test"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := append(tt.opts, WithNoRateLimit())
+			c := NewClient(tt.cfg, opts...).(*Client)
+			if c.baseURL != tt.want {
+				t.Errorf("baseURL = %q, want %q", c.baseURL, tt.want)
+			}
+		})
+	}
+}
+
 func TestGetContextWindowSize_EffectiveWindow(t *testing.T) {
 	if got := NewClient(Config{ContextSize: 8192}).GetContextWindowSize(); got != 8192 {
 		t.Errorf("GetContextWindowSize() = %d, want 8192", got)

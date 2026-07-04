@@ -15,6 +15,9 @@ import (
 )
 
 const (
+	// anthropicBaseURL is the base URL for the Anthropic Model API.
+	anthropicBaseURL = "https://api.anthropic.com"
+
 	// nonStreamingCap is the largest max_tokens the SDK accepts on a
 	// non-streaming request: its guard rejects requests expected to take longer
 	// than 10 minutes, scaled at 128000 tokens per hour.
@@ -39,9 +42,7 @@ type Client struct {
 
 type Config struct {
 	APIKey string
-	// BaseURL overrides the API endpoint when set. Used for testing.
-	BaseURL string
-	Model   Model
+	Model  Model
 }
 
 type configOptions struct {
@@ -57,11 +58,10 @@ func WithNoRateLimit() Option {
 }
 
 func NewClient(cfg Config, opts ...Option) common.LLM {
-	clientOpts := []option.RequestOption{option.WithAPIKey(cfg.APIKey)}
-	if cfg.BaseURL != "" {
-		clientOpts = append(clientOpts, option.WithBaseURL(cfg.BaseURL))
-	}
-	client := anthropicSDK.NewClient(clientOpts...)
+	client := anthropicSDK.NewClient(
+		option.WithAPIKey(cfg.APIKey),
+		option.WithBaseURL(anthropicBaseURL),
+	)
 	model := cfg.Model
 	if model == nil {
 		model = Model_ClaudeSonnet4_6

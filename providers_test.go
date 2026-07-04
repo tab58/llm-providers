@@ -40,7 +40,7 @@ func TestConstructorDefaults(t *testing.T) {
 		},
 		{
 			"lightning default",
-			lightning.NewClient(lightning.Config{APIKey: "k", BaseURL: "https://example.test"}),
+			lightning.NewClient(lightning.Config{APIKey: "k"}),
 			string(lightning.Model_Gemma4_31B.GetName()),
 		},
 		{

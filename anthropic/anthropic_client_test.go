@@ -11,19 +11,24 @@ import (
 
 	"github.com/tab58/llm-providers/common"
 	"github.com/tab58/llm-providers/testutils"
+
+	anthropicSDK "github.com/anthropics/anthropic-sdk-go"
+	"github.com/anthropics/anthropic-sdk-go/option"
 )
 
 // newAnthropicTestClient creates an Anthropic client pointed at a test server.
-// Rate limiting is disabled so requests don't trigger CountTokens API calls.
+// Config has no BaseURL override (the Anthropic endpoint is fixed), so the
+// client is constructed directly. No rate limiting, so requests don't trigger
+// CountTokens API calls.
 func newAnthropicTestClient(t *testing.T, handler http.HandlerFunc) *Client {
 	t.Helper()
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
-	// WithNoRateLimit returns the raw client, so the assertion is safe.
-	return NewClient(
-		Config{APIKey: "test", BaseURL: srv.URL},
-		WithNoRateLimit(),
-	).(*Client)
+	sdkClient := anthropicSDK.NewClient(
+		option.WithAPIKey("test"),
+		option.WithBaseURL(srv.URL),
+	)
+	return &Client{client: &sdkClient, model: Model_ClaudeSonnet4_6}
 }
 
 func writeSSE(t *testing.T, w http.ResponseWriter, eventType, data string) {
