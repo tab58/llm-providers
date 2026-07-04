@@ -30,29 +30,6 @@ func maxNonStreamingTokens(model string) int64 {
 	return limit
 }
 
-type Model string
-
-const (
-	ModelClaudeOpus4_6   = Model(anthropicSDK.ModelClaudeOpus4_6)
-	ModelClaudeSonnet4_6 = Model(anthropicSDK.ModelClaudeSonnet4_6)
-	ModelClaudeHaiku4_5  = Model(anthropicSDK.ModelClaudeHaiku4_5)
-
-	MaxTokensClaudeOpus4_6   int64 = 128000
-	MaxTokensClaudeSonnet4_6 int64 = 64000
-
-	ContextWindowClaudeOpus4_6   = 200_000
-	ContextWindowClaudeSonnet4_6 = 200_000
-	ContextWindowClaudeHaiku4_5  = 200_000
-
-	ContextWindowDefault = 200_000
-)
-
-var anthropicContextWindows = map[Model]int{
-	ModelClaudeOpus4_6:   ContextWindowClaudeOpus4_6,
-	ModelClaudeSonnet4_6: ContextWindowClaudeSonnet4_6,
-	ModelClaudeHaiku4_5:  ContextWindowClaudeHaiku4_5,
-}
-
 type Client struct {
 	client      *anthropicSDK.Client
 	rateLimiter *utils.TokenBucket
@@ -87,8 +64,8 @@ func NewClient(cfg Config, opts ...Option) *Client {
 	}
 	client := anthropicSDK.NewClient(clientOpts...)
 	model := cfg.Model
-	if model == "" {
-		model = ModelClaudeSonnet4_6
+	if model == nil {
+		model = Model_ClaudeSonnet4_6
 	}
 
 	var o configOptions
@@ -272,14 +249,11 @@ func (a *Client) SendMessageWithTools(ctx context.Context, req common.Completion
 }
 
 func (a *Client) GetCurrentModel() string {
-	return string(a.model)
+	return a.model.GetName()
 }
 
 func (a *Client) GetContextWindowSize() int {
-	if w, ok := anthropicContextWindows[a.model]; ok {
-		return w
-	}
-	return ContextWindowDefault
+	return a.model.GetContextWindowSize()
 }
 
 func (a *Client) CountTokens(ctx context.Context, req common.CompletionRequest) (common.TokenCount, error) {

@@ -40,3 +40,39 @@ type LLM interface {
 	// GetContextWindowSize returns the model's total context window in tokens.
 	GetContextWindowSize() int
 }
+
+// Model represents a model available from a provider.
+type Model interface {
+	// GetName returns the model's name.
+	GetName() string
+
+	// GetMaxTokens returns the model's maximum token limit.
+	GetMaxTokens() int
+
+	// GetContextWindowSize returns the model's total context window in tokens.
+	GetContextWindowSize() int
+}
+
+// ModelDefinition represents a model available from a provider.
+// Implementations of the Model interface can be used to define models for specific providers.
+type ModelDefinition struct {
+	Name                 string
+	MaxTokens            int
+	ContextWindowSize    int
+	DefaultContextWindow int
+}
+
+func (m ModelDefinition) GetName() string {
+	return m.Name
+}
+
+func (m ModelDefinition) GetMaxTokens() int {
+	return m.MaxTokens
+}
+
+func (m ModelDefinition) GetContextWindowSize() int {
+	if m.ContextWindowSize > 0 {
+		return m.ContextWindowSize
+	}
+	return m.DefaultContextWindow
+}

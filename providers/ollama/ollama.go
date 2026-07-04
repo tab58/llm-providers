@@ -21,17 +21,7 @@ var thinkBlockRe = regexp.MustCompile(`(?s)<think>.*?</think>\s*`)
 
 const OLLAMA_CLOUD_BASE_URL = "https://ollama.com/"
 
-type Model string
-
 const MAX_CONCURRENT_REQUESTS = 3
-
-// Ollama model constants
-const (
-	ModelQwen35_9B   = Model("qwen3.5:9b")
-	ModelQwen35_35B  = Model("qwen3.5:35b")
-	ModelQwen35_122B = Model("qwen3.5:122b")
-	ModelGemma4_31B  = Model("gemma4:31b")
-)
 
 // Client implements the LLM interface using Client's native /api/* endpoints.
 type Client struct {
@@ -40,7 +30,6 @@ type Client struct {
 	client      *http.Client
 	rateLimiter *utils.Semaphore
 	model       Model
-	contextSize int64
 	log         logger.Logger
 }
 
@@ -64,8 +53,8 @@ func (o *Client) logf(format string, args ...any) {
 // NewClient creates an Ollama LLM client using the native Ollama API.
 func NewClient(cfg Config) *Client {
 	model := cfg.Model
-	if model == "" {
-		model = ModelGemma4_31B
+	if model == nil {
+		model = Model_Gemma4_31B
 	}
 
 	url := cfg.BaseURL
@@ -79,7 +68,6 @@ func NewClient(cfg Config) *Client {
 		client:      http.DefaultClient,
 		rateLimiter: utils.NewSemaphore(MAX_CONCURRENT_REQUESTS),
 		model:       model,
-		contextSize: cfg.ContextSize,
 		log:         cfg.Logger,
 	}
 }
@@ -308,14 +296,11 @@ func (o *Client) SendMessageWithTools(ctx context.Context, req common.Completion
 }
 
 func (o *Client) GetCurrentModel() string {
-	return string(o.model)
+	return o.model.GetName()
 }
 
 func (o *Client) GetContextWindowSize() int {
-	if o.contextSize > 0 {
-		return int(o.contextSize)
-	}
-	return common.ContextWindowDefault
+	return o.model.GetContextWindowSize()
 }
 
 // CountTokens is not supported by Ollama. Returns ErrNotSupported.
@@ -404,8 +389,9 @@ func (o *Client) ollamaOptions(req common.CompletionRequest) map[string]any {
 	if req.MaxTokens > 0 {
 		opts["num_predict"] = req.MaxTokens
 	}
-	if o.contextSize > 0 {
-		opts["num_ctx"] = o.contextSize
+	contextSize := o.model.GetContextWindowSize()
+	if contextSize > 0 {
+		opts["num_ctx"] = contextSize
 	}
 	if len(opts) == 0 {
 		return nil

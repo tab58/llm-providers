@@ -26,7 +26,7 @@ func newCompatTestClient(t *testing.T, handler http.HandlerFunc) *Client {
 		option.WithBaseURL(srv.URL),
 		option.WithMaxRetries(0),
 	)
-	return &Client{Name: "test", Client: &client, Model: "test-model"}
+	return &Client{Name: "test", Client: &client, Model: common.ModelDefinition{Name: "test-model"}}
 }
 
 func TestOpenAICompat_SendSyncMessage(t *testing.T) {

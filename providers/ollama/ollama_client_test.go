@@ -136,7 +136,7 @@ func TestOllama_CountTokensNotSupported(t *testing.T) {
 
 func TestOllama_GetCurrentModel(t *testing.T) {
 	client := NewClient(Config{})
-	if got := client.GetCurrentModel(); got != string(ModelGemma4_31B) {
-		t.Errorf("GetCurrentModel() = %q, want default %q", got, ModelGemma4_31B)
+	if got := client.GetCurrentModel(); got != Model_Gemma4_31B.GetName() {
+		t.Errorf("GetCurrentModel() = %q, want default %q", got, Model_Gemma4_31B.GetName())
 	}
 }

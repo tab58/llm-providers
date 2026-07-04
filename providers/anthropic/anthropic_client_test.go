@@ -334,7 +334,7 @@ func TestAnthropic_ListModels(t *testing.T) {
 
 func TestAnthropic_GetCurrentModel(t *testing.T) {
 	client := NewClient(Config{APIKey: "test"}, WithNoRateLimit())
-	if got := client.GetCurrentModel(); got != string(ModelClaudeSonnet4_6) {
+	if got := client.GetCurrentModel(); got != Model_ClaudeSonnet4_6.GetName() {
 		t.Errorf("GetCurrentModel() = %q, want default sonnet", got)
 	}
 }

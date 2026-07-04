@@ -21,37 +21,37 @@ func TestConstructorDefaults(t *testing.T) {
 		{
 			"anthropic default",
 			anthropic.NewClient(anthropic.Config{APIKey: "k"}),
-			string(anthropic.ModelClaudeSonnet4_6),
+			string(anthropic.Model_ClaudeSonnet4_6.GetName()),
 		},
 		{
 			"openai default",
 			openai.NewClient(openai.Config{APIKey: "k"}),
-			string(openai.ModelGPT5_4),
+			string(openai.Model_GPT5_4.GetName()),
 		},
 		{
 			"cerebras default",
 			cerebras.NewClient(cerebras.Config{APIKey: "k"}),
-			string(cerebras.ModelGPTOSS120B),
+			string(cerebras.Model_GPTOSS_120B.GetName()),
 		},
 		{
 			"cerebras override",
-			cerebras.NewClient(cerebras.Config{APIKey: "k", Model: cerebras.Model("custom")}),
+			cerebras.NewClient(cerebras.Config{APIKey: "k", Model: common.ModelDefinition{Name: "custom"}}),
 			"custom",
 		},
 		{
 			"lightning default",
 			lightning.NewClient(lightning.Config{APIKey: "k", BaseURL: "https://example.test"}),
-			string(lightning.ModelGemma4_31B),
+			string(lightning.Model_Gemma4_31B.GetName()),
 		},
 		{
 			"openrouter default",
 			openrouter.NewClient(openrouter.Config{APIKey: "k"}),
-			string(openrouter.ModelGemma4_31B),
+			string(openrouter.Model_Gemma4_31B.GetName()),
 		},
 		{
 			"ollama default",
 			ollama.NewClient(ollama.Config{}),
-			string(ollama.ModelGemma4_31B),
+			string(ollama.Model_Gemma4_31B.GetName()),
 		},
 	}
 

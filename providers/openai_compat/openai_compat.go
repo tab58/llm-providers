@@ -22,13 +22,14 @@ const (
 	compatBackoffJitter = 0.5
 )
 
+type Model = common.Model
+
 type Client struct {
 	// Name identifies the provider in error messages and logs.
-	Name          string
-	Client        *openai.Client
-	Model         string
-	ContextWindow int
-	RateLimiter   *utils.TokenBucket
+	Name        string
+	Client      *openai.Client
+	Model       Model
+	RateLimiter *utils.TokenBucket
 	// TokenCostLimit acquires estimated input tokens from the rate limiter
 	// instead of one unit per request.
 	TokenCostLimit bool
@@ -251,14 +252,11 @@ func (c *Client) streamOnce(ctx context.Context, params openai.ChatCompletionNew
 }
 
 func (c *Client) GetCurrentModel() string {
-	return c.Model
+	return c.Model.GetName()
 }
 
 func (c *Client) GetContextWindowSize() int {
-	if c.ContextWindow > 0 {
-		return c.ContextWindow
-	}
-	return common.ContextWindowDefault
+	return c.Model.GetContextWindowSize()
 }
 
 // CountTokens estimates input tokens using the ~4 chars per token rule of

@@ -8,21 +8,9 @@ import (
 	"github.com/openai/openai-go/v3/option"
 )
 
-type Model string
-
 const (
 	cerebrasBaseURL = "https://api.cerebras.ai/v1"
-
-	ModelGPTOSS120B = Model("gpt-oss-120b")
-
-	MaxTokensGPTOSS120B int64 = 128000
-
-	ContextWindowGPTOSS120B = 128_000
 )
-
-var cerebrasContextWindows = map[Model]int{
-	ModelGPTOSS120B: ContextWindowGPTOSS120B,
-}
 
 // Client implements the LLM interface using Client's OpenAI-compatible API.
 type Client struct {
@@ -58,8 +46,8 @@ func NewClient(cfg Config, opts ...Option) *Client {
 		option.WithBaseURL(cerebrasBaseURL),
 	)
 	model := cfg.Model
-	if model == "" {
-		model = ModelGPTOSS120B
+	if model == nil {
+		model = Model_GPTOSS_120B
 	}
 
 	var o options
@@ -77,8 +65,7 @@ func NewClient(cfg Config, opts ...Option) *Client {
 	return &Client{&openai_compat.Client{
 		Name:           "cerebras",
 		Client:         &client,
-		Model:          string(model),
-		ContextWindow:  cerebrasContextWindows[model],
+		Model:          openai_compat.Model(model),
 		RateLimiter:    o.rateLimiter,
 		RetryRateLimit: true,
 	}}

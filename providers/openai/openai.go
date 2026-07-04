@@ -8,24 +8,6 @@ import (
 	"github.com/openai/openai-go/v3/option"
 )
 
-type Model string
-
-const (
-	ModelGPT5_4     = Model(openai.ChatModelGPT5_4)
-	ModelGPT5_4Mini = Model(openai.ChatModelGPT5_4Mini)
-
-	MaxTokensGPT5_4     int64 = 128000
-	MaxTokensGPT5_4Mini int64 = 64000
-
-	ContextWindowGPT5_4     = 1_000_000
-	ContextWindowGPT5_4Mini = 1_000_000
-)
-
-var openAIContextWindows = map[Model]int{
-	ModelGPT5_4:     ContextWindowGPT5_4,
-	ModelGPT5_4Mini: ContextWindowGPT5_4Mini,
-}
-
 // Client implements the LLM interface using the Client API.
 type Client struct {
 	*openai_compat.Client
@@ -59,8 +41,8 @@ func NewClient(cfg Config, opts ...Option) *Client {
 		option.WithAPIKey(cfg.APIKey),
 	)
 	model := cfg.Model
-	if model == "" {
-		model = ModelGPT5_4
+	if model == nil {
+		model = Model_GPT5_4
 	}
 
 	var o options
@@ -78,8 +60,7 @@ func NewClient(cfg Config, opts ...Option) *Client {
 	return &Client{&openai_compat.Client{
 		Name:                   "openai",
 		Client:                 &client,
-		Model:                  string(model),
-		ContextWindow:          openAIContextWindows[model],
+		Model:                  model,
 		RateLimiter:            o.rateLimiter,
 		TokenCostLimit:         true,
 		UseMaxCompletionTokens: true,
