@@ -60,6 +60,9 @@ type Model interface {
 	// GetDefaultContextWindow returns the context window to run at by default
 	// (e.g. Ollama's num_ctx), which may be smaller than the model's maximum.
 	GetDefaultContextWindow() int
+
+	// GetProvider returns the provider this model belongs to.
+	GetProvider() Provider
 }
 
 // ModelDefinition represents a model available from a provider.
@@ -75,6 +78,8 @@ type ModelDefinition struct {
 	// num_ctx). Set it below ContextWindowSize to bound memory use; leave it
 	// 0 to run at the full ContextWindowSize. Most providers ignore it.
 	DefaultContextWindow int
+	// Provider is the provider that this model belongs to.
+	Provider Provider
 }
 
 func (m ModelDefinition) GetName() string {
@@ -97,4 +102,8 @@ func (m ModelDefinition) GetDefaultContextWindow() int {
 		return m.DefaultContextWindow
 	}
 	return m.ContextWindowSize
+}
+
+func (m ModelDefinition) GetProvider() Provider {
+	return m.Provider
 }

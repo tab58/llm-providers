@@ -12,11 +12,13 @@ var (
 		Name:              openai.ChatModelGPT5_4,
 		MaxTokens:         128_000,
 		ContextWindowSize: 1_050_000,
+		Provider:          common.ProviderOpenAI,
 	}
 
 	Model_GPT5_4Mini Model = common.ModelDefinition{
 		Name:              openai.ChatModelGPT5_4Mini,
 		MaxTokens:         128_000,
 		ContextWindowSize: 400_000,
+		Provider:          common.ProviderOpenAI,
 	}
 )

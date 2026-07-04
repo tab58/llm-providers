@@ -10,11 +10,13 @@ var (
 		Name:              "lightning-ai/gemma-4-31B-it",
 		MaxTokens:         32_768,
 		ContextWindowSize: 262_144,
+		Provider:          common.ProviderLightning,
 	}
 
 	Model_GPTOSS_120B Model = common.ModelDefinition{
 		Name:              "lightning-ai/gpt-oss-120b",
 		MaxTokens:         32_768,
 		ContextWindowSize: 131_072,
+		Provider:          common.ProviderLightning,
 	}
 )

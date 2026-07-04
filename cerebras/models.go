@@ -10,5 +10,6 @@ var (
 		Name:              "gpt-oss-120b",
 		MaxTokens:         40_960,
 		ContextWindowSize: 131_072,
+		Provider:          common.ProviderCerebras,
 	}
 )

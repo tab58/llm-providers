@@ -10,6 +10,7 @@ var (
 		MaxTokens:            32_768,
 		ContextWindowSize:    262_144,
 		DefaultContextWindow: 32_768,
+		Provider:             common.ProviderOllama,
 	}
 
 	Model_Qwen3_5_35B Model = common.ModelDefinition{
@@ -17,6 +18,7 @@ var (
 		MaxTokens:            32_768,
 		ContextWindowSize:    262_144,
 		DefaultContextWindow: 32_768,
+		Provider:             common.ProviderOllama,
 	}
 
 	Model_Qwen3_5_122B Model = common.ModelDefinition{
@@ -24,6 +26,7 @@ var (
 		MaxTokens:            32_768,
 		ContextWindowSize:    262_144,
 		DefaultContextWindow: 32_768,
+		Provider:             common.ProviderOllama,
 	}
 
 	Model_Gemma4_31B Model = common.ModelDefinition{
@@ -31,5 +34,6 @@ var (
 		MaxTokens:            32_768,
 		ContextWindowSize:    262_144,
 		DefaultContextWindow: 32_768,
+		Provider:             common.ProviderOllama,
 	}
 )

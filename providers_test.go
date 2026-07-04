@@ -63,3 +63,33 @@ func TestConstructorDefaults(t *testing.T) {
 		})
 	}
 }
+
+func TestModelProviders(t *testing.T) {
+	tests := []struct {
+		name  string
+		model common.Model
+		want  common.Provider
+	}{
+		{"anthropic opus", anthropic.Model_ClaudeOpus4_6, common.ProviderAnthropic},
+		{"anthropic sonnet", anthropic.Model_ClaudeSonnet4_6, common.ProviderAnthropic},
+		{"anthropic haiku", anthropic.Model_ClaudeHaiku4_5, common.ProviderAnthropic},
+		{"cerebras gpt-oss", cerebras.Model_GPTOSS_120B, common.ProviderCerebras},
+		{"lightning gemma", lightning.Model_Gemma4_31B, common.ProviderLightning},
+		{"lightning gpt-oss", lightning.Model_GPTOSS_120B, common.ProviderLightning},
+		{"ollama qwen 9b", ollama.Model_Qwen3_5_9B, common.ProviderOllama},
+		{"ollama qwen 35b", ollama.Model_Qwen3_5_35B, common.ProviderOllama},
+		{"ollama qwen 122b", ollama.Model_Qwen3_5_122B, common.ProviderOllama},
+		{"ollama gemma", ollama.Model_Gemma4_31B, common.ProviderOllama},
+		{"openai gpt-5.4", openai.Model_GPT5_4, common.ProviderOpenAI},
+		{"openai gpt-5.4-mini", openai.Model_GPT5_4Mini, common.ProviderOpenAI},
+		{"openrouter gemma", openrouter.Model_Gemma4_31B, common.ProviderOpenRouter},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.model.GetProvider(); got != tt.want {
+				t.Errorf("GetProvider() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

@@ -9,5 +9,6 @@ var (
 		Name:              "google/gemma-4-31b-it",
 		MaxTokens:         32_768,
 		ContextWindowSize: 262_144,
+		Provider:          common.ProviderOpenRouter,
 	}
 )

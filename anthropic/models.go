@@ -12,17 +12,20 @@ var (
 		Name:              anthropicSDK.ModelClaudeOpus4_6,
 		MaxTokens:         128_000,
 		ContextWindowSize: 1_000_000,
+		Provider:          common.ProviderAnthropic,
 	}
 
 	Model_ClaudeSonnet4_6 Model = common.ModelDefinition{
 		Name:              anthropicSDK.ModelClaudeSonnet4_6,
 		MaxTokens:         128_000,
 		ContextWindowSize: 1_000_000,
+		Provider:          common.ProviderAnthropic,
 	}
 
 	Model_ClaudeHaiku4_5 Model = common.ModelDefinition{
 		Name:              anthropicSDK.ModelClaudeHaiku4_5,
 		MaxTokens:         64_000,
 		ContextWindowSize: 200_000,
+		Provider:          common.ProviderAnthropic,
 	}
 )
