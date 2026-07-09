@@ -64,7 +64,7 @@ type limitedLLM struct {
 var _ common.LLM = (*limitedLLM)(nil)
 
 func (w *limitedLLM) ProviderName() common.Provider {
-	return common.Provider("")
+	return w.inner.ProviderName()
 }
 
 // acquire computes the request cost and takes the limiter. On success the

@@ -140,3 +140,48 @@ func TestOllama_GetCurrentModel(t *testing.T) {
 		t.Errorf("GetCurrentModel() = %q, want default %q", got, Model_Gemma4_31B.GetName())
 	}
 }
+
+// Ollama streams assistant text spread across many chunks; the final done
+// chunk usually carries empty content. The terminal StreamEventStop response
+// must contain the full accumulated text, or agent loops see an empty final
+// answer (and retry pointlessly) whenever the model streams.
+func TestOllama_SendStreamingMessage_AccumulatesTextAcrossChunks(t *testing.T) {
+	client := newOllamaTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/x-ndjson")
+		chunks := []string{
+			`{"model":"glm-5.2:cloud","message":{"role":"assistant","content":"The root "},"done":false}`,
+			`{"model":"glm-5.2:cloud","message":{"role":"assistant","content":"cause is a "},"done":false}`,
+			`{"model":"glm-5.2:cloud","message":{"role":"assistant","content":"deadlock."},"done":false}`,
+			`{"model":"glm-5.2:cloud","message":{"role":"assistant","content":""},"done":true,"done_reason":"stop","eval_count":12}`,
+		}
+		for _, c := range chunks {
+			_, _ = w.Write([]byte(c + "\n"))
+		}
+	})
+
+	events := make(chan common.StreamEvent, 64)
+	go func() {
+		if err := client.SendStreamingMessage(context.Background(), common.CompletionRequest{}, events); err != nil {
+			t.Errorf("SendStreamingMessage: %v", err)
+		}
+	}()
+
+	var stop *common.CompletionResponse
+	for ev := range events {
+		if ev.Type == common.StreamEventStop {
+			stop = ev.Response
+		}
+	}
+	if stop == nil {
+		t.Fatal("no StreamEventStop received")
+	}
+	var text string
+	for _, block := range stop.Content {
+		if block.Type == common.ContentTypeText {
+			text += block.Text
+		}
+	}
+	if text != "The root cause is a deadlock." {
+		t.Errorf("final response text = %q, want full accumulated text", text)
+	}
+}

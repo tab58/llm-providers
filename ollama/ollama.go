@@ -23,6 +23,11 @@ const OLLAMA_CLOUD_BASE_URL = "https://ollama.com/"
 // ollamaLocalBaseURL is the default address of a locally running Ollama server.
 const ollamaLocalBaseURL = "http://localhost:11434"
 
+// defaultMaxConcurrency bounds concurrent requests when the caller does not
+// configure a limit. Without it the default semaphore would have zero slots
+// and block every request forever.
+const defaultMaxConcurrency = 10
+
 // Client implements the LLM interface using Client's native /api/* endpoints.
 type Client struct {
 	baseURL     string
@@ -132,6 +137,9 @@ func NewClient(cfg Config, opts ...Option) common.LLM {
 		return raw
 	}
 
+	if o.maxConcurrency <= 0 {
+		o.maxConcurrency = defaultMaxConcurrency
+	}
 	return ratelimit.Wrap(raw, ratelimit.NewSemaphore(o.maxConcurrency), ratelimit.CostPerRequest)
 }
 
@@ -271,6 +279,7 @@ func (o *Client) SendStreamingMessage(ctx context.Context, req common.Completion
 
 	var started bool
 	var accumulatedToolCalls []ollamaToolCall
+	var accumulatedText strings.Builder
 	thinkParser := newThinkBlockParser(events)
 	decoder := json.NewDecoder(resp.Body)
 	for decoder.More() {
@@ -287,6 +296,7 @@ func (o *Client) SendStreamingMessage(ctx context.Context, req common.Completion
 
 		if chunk.Message.Content != "" {
 			thinkParser.Feed(chunk.Message.Content)
+			accumulatedText.WriteString(chunk.Message.Content)
 		}
 
 		if len(chunk.Message.ToolCalls) > 0 {
@@ -300,6 +310,11 @@ func (o *Client) SendStreamingMessage(ctx context.Context, req common.Completion
 			if len(accumulatedToolCalls) > 0 {
 				chunk.Message.ToolCalls = accumulatedToolCalls
 			}
+			// Streamed text arrives spread across chunks and the done chunk's
+			// content is typically empty — the terminal response must carry
+			// the full accumulated text (think blocks are stripped inside
+			// fromOllamaResponse) or callers see an empty final answer.
+			chunk.Message.Content = accumulatedText.String()
 			o.logf("ollama: done chunk content=%q tool_calls=%d done_reason=%s eval_count=%d",
 				chunk.Message.Content, len(chunk.Message.ToolCalls), chunk.DoneReason, chunk.EvalCount)
 			res := fromOllamaResponse(chunk, o.log)

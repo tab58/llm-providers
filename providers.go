@@ -1,6 +1,9 @@
 package provider
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/tab58/llm-providers/anthropic"
 	"github.com/tab58/llm-providers/cerebras"
 	"github.com/tab58/llm-providers/common"
@@ -81,4 +84,30 @@ func LLMFromModel(apiKey string, model common.ModelDefinition, opts ...Option) (
 	default:
 		return nil, common.ErrUnknownProvider
 	}
+}
+
+// providerEnvKeys maps each provider to the conventional environment
+// variable holding its API key.
+var providerEnvKeys = map[common.Provider]string{
+	common.ProviderAnthropic:  "ANTHROPIC_API_KEY",
+	common.ProviderCerebras:   "CEREBRAS_API_KEY",
+	common.ProviderLightning:  "LIGHTNING_API_KEY",
+	common.ProviderOllama:     "OLLAMA_API_KEY",
+	common.ProviderOpenAI:     "OPENAI_API_KEY",
+	common.ProviderOpenRouter: "OPENROUTER_API_KEY",
+}
+
+// LLMFromEnv builds an LLM for model, resolving the API key from the
+// provider's conventional environment variable. Ollama does not require a
+// key; every other provider errors if its variable is unset or empty.
+func LLMFromEnv(model common.ModelDefinition, opts ...Option) (common.LLM, error) {
+	envKey, ok := providerEnvKeys[model.Provider]
+	if !ok {
+		return nil, fmt.Errorf("provider %q: %w", model.Provider, common.ErrUnknownProvider)
+	}
+	apiKey := os.Getenv(envKey)
+	if apiKey == "" && model.Provider != common.ProviderOllama {
+		return nil, fmt.Errorf("missing %s for provider %q", envKey, model.Provider)
+	}
+	return LLMFromModel(apiKey, model, opts...)
 }
