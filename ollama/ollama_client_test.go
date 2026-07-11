@@ -2,7 +2,9 @@ package ollama
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -138,6 +140,56 @@ func TestOllama_GetCurrentModel(t *testing.T) {
 	client := NewClient(Config{})
 	if got := client.GetCurrentModel(); got != Model_Gemma4_31B.GetName() {
 		t.Errorf("GetCurrentModel() = %q, want default %q", got, Model_Gemma4_31B.GetName())
+	}
+}
+
+// The request's Think field must pass through to the wire verbatim: nil omits
+// `think` entirely (model default — thinking models think, non-thinking models
+// don't error), explicit true/false are sent as-is. Ollama rejects think:true
+// for models without thinking support, so nil must never be coerced to a bool.
+func TestOllama_ThinkRequestPassthrough(t *testing.T) {
+	tests := []struct {
+		name  string
+		think *bool
+		want  string // raw JSON expectation about the "think" key
+	}{
+		{"nil omits think", nil, "absent"},
+		{"explicit true", boolPtr(true), "true"},
+		{"explicit false", boolPtr(false), "false"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var body map[string]any
+			client := newOllamaTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					t.Errorf("decode request: %v", err)
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"model":"m","message":{"role":"assistant","content":"ok"},"done":true,"done_reason":"stop"}`))
+			})
+
+			_, err := client.SendSyncMessage(context.Background(), common.CompletionRequest{
+				Model:    "m",
+				Messages: []common.Message{common.NewUserMessage("hi")},
+				Think:    tt.think,
+			})
+			if err != nil {
+				t.Fatalf("SendSyncMessage: %v", err)
+			}
+
+			got, present := body["think"]
+			switch tt.want {
+			case "absent":
+				if present {
+					t.Errorf("request sent think=%v, want key absent", got)
+				}
+			case "true", "false":
+				if !present || fmt.Sprintf("%v", got) != tt.want {
+					t.Errorf("request think = %v (present=%v), want %s", got, present, tt.want)
+				}
+			}
+		})
 	}
 }
 

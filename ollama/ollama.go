@@ -221,7 +221,7 @@ func (o *Client) SendSyncMessage(ctx context.Context, req common.CompletionReque
 		Model:    string(req.Model),
 		Messages: toOllamaMessages(req, o.log),
 		Stream:   false,
-		Think:    boolPtr(false),
+		Think:    req.Think,
 		Tools:    tools,
 		Options:  o.ollamaOptions(req),
 	}
@@ -246,7 +246,7 @@ func (o *Client) SendStreamingMessage(ctx context.Context, req common.Completion
 		Model:    string(req.Model),
 		Messages: toOllamaMessages(req, o.log),
 		Stream:   true,
-		Think:    boolPtr(false),
+		Think:    req.Think,
 		Tools:    tools,
 		Options:  o.ollamaOptions(req),
 	}
@@ -358,7 +358,7 @@ func (o *Client) SendMessageWithTools(ctx context.Context, req common.Completion
 		Model:    string(req.Model),
 		Messages: toOllamaMessages(req, o.log),
 		Stream:   false,
-		Think:    boolPtr(false),
+		Think:    req.Think,
 		Tools:    ollamaTools,
 		Options:  o.ollamaOptions(req),
 	}

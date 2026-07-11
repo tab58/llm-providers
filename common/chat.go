@@ -168,6 +168,12 @@ type CompletionRequest struct {
 	MaxTokens   int64
 	Temperature *float64
 	Tools       []ToolDefinition
+	// Think controls model reasoning (chain-of-thought) for providers that
+	// support it. nil uses the model's default — thinking models think, others
+	// are unaffected. Explicit true forces it (providers may reject it for
+	// models without thinking support); explicit false disables it. Providers
+	// without a native switch ignore the field.
+	Think *bool
 }
 
 // CompletionResponse is the provider-agnostic output from an LLM completion call.
