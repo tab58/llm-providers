@@ -141,6 +141,89 @@ func TestOllama_GetCurrentModel(t *testing.T) {
 	}
 }
 
+// Thinking models on Ollama Cloud return chain-of-thought in the message's
+// native `thinking` field. It must surface as a thinking block, not vanish
+// and not pollute Text().
+func TestOllama_SendSyncMessage_NativeThinkingField(t *testing.T) {
+	client := newOllamaTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if _, err := w.Write([]byte(`{
+			"model": "glm-5.2:cloud",
+			"message": {"role": "assistant", "content": "hello", "thinking": "pondering"},
+			"done": true, "done_reason": "stop"
+		}`)); err != nil {
+			t.Errorf("write response: %v", err)
+		}
+	})
+
+	res, err := client.SendSyncMessage(context.Background(), common.CompletionRequest{
+		Model:    "glm-5.2:cloud",
+		Messages: []common.Message{common.NewUserMessage("hi")},
+	})
+	if err != nil {
+		t.Fatalf("SendSyncMessage: %v", err)
+	}
+	if res.Text() != "hello" {
+		t.Errorf("Text() = %q, want hello", res.Text())
+	}
+	if res.Thinking() != "pondering" {
+		t.Errorf("Thinking() = %q, want pondering", res.Thinking())
+	}
+}
+
+// Streaming chunks can carry native `thinking` deltas alongside content
+// deltas. They must be emitted as StreamEventThinking and accumulated into a
+// thinking block on the terminal response.
+func TestOllama_SendStreamingMessage_NativeThinkingDeltas(t *testing.T) {
+	client := newOllamaTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/x-ndjson")
+		chunks := []string{
+			`{"model":"glm-5.2:cloud","message":{"role":"assistant","thinking":"hmm, "},"done":false}`,
+			`{"model":"glm-5.2:cloud","message":{"role":"assistant","thinking":"tricky"},"done":false}`,
+			`{"model":"glm-5.2:cloud","message":{"role":"assistant","content":"answer"},"done":false}`,
+			`{"model":"glm-5.2:cloud","message":{"role":"assistant","content":""},"done":true,"done_reason":"stop"}`,
+		}
+		for _, c := range chunks {
+			_, _ = w.Write([]byte(c + "\n"))
+		}
+	})
+
+	events := make(chan common.StreamEvent, 64)
+	go func() {
+		if err := client.SendStreamingMessage(context.Background(), common.CompletionRequest{}, events); err != nil {
+			t.Errorf("SendStreamingMessage: %v", err)
+		}
+	}()
+
+	var thinkingDeltas, textDeltas string
+	var stop *common.CompletionResponse
+	for ev := range events {
+		switch ev.Type {
+		case common.StreamEventThinking:
+			thinkingDeltas += ev.Text
+		case common.StreamEventDelta:
+			textDeltas += ev.Text
+		case common.StreamEventStop:
+			stop = ev.Response
+		}
+	}
+	if thinkingDeltas != "hmm, tricky" {
+		t.Errorf("thinking deltas = %q, want %q", thinkingDeltas, "hmm, tricky")
+	}
+	if textDeltas != "answer" {
+		t.Errorf("text deltas = %q, want %q", textDeltas, "answer")
+	}
+	if stop == nil {
+		t.Fatal("no StreamEventStop received")
+	}
+	if stop.Thinking() != "hmm, tricky" {
+		t.Errorf("final response Thinking() = %q, want %q", stop.Thinking(), "hmm, tricky")
+	}
+	if stop.Text() != "answer" {
+		t.Errorf("final response Text() = %q, want %q", stop.Text(), "answer")
+	}
+}
+
 // Ollama streams assistant text spread across many chunks; the final done
 // chunk usually carries empty content. The terminal StreamEventStop response
 // must contain the full accumulated text, or agent loops see an empty final

@@ -122,12 +122,98 @@ func TestStripThinkBlocks(t *testing.T) {
 		{"think block stripped", "<think>reasoning</think>answer", "answer"},
 		{"multiline think block", "<think>line1\nline2</think>\nanswer", "answer"},
 		{"empty after strip", "<think>only thoughts</think>", ""},
+		// GLM/Qwen templates put the opening <think> in the prompt, so the
+		// completion contains bare closers only.
+		{"orphan closer", "reasoning</think>answer", "answer"},
+		{"multiple orphan closers", "step one</think>step two</think>answer", "answer"},
+		{"orphan closer only thoughts", "reasoning</think>", ""},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := StripThinkBlocks(tt.input); got != tt.expected {
 				t.Errorf("StripThinkBlocks(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestSplitThinkBlocks(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		wantThinking string
+		wantText     string
+	}{
+		{"no tags", "hello", "", "hello"},
+		{"paired block", "<think>reasoning</think>answer", "reasoning", "answer"},
+		{"orphan closer", "reasoning</think>answer", "reasoning", "answer"},
+		{
+			"multiple orphan closers keep full chain of thought",
+			"step one</think>step two</think>answer",
+			"step one</think>step two",
+			"answer",
+		},
+		{"thoughts only", "<think>reasoning</think>", "reasoning", ""},
+		{"empty", "", "", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			thinking, text := splitThinkBlocks(tt.input)
+			if thinking != tt.wantThinking {
+				t.Errorf("thinking = %q, want %q", thinking, tt.wantThinking)
+			}
+			if text != tt.wantText {
+				t.Errorf("text = %q, want %q", text, tt.wantText)
+			}
+		})
+	}
+}
+
+// Thinking must be classified as ContentTypeThinking blocks, never dropped and
+// never leaked into Text() — whether it arrives in Ollama's native `thinking`
+// field or inline as (possibly unpaired) <think> tags.
+func TestFromOllamaResponse_ThinkingClassified(t *testing.T) {
+	tests := []struct {
+		name         string
+		message      ollamaChatMessage
+		wantThinking string
+		wantText     string
+	}{
+		{
+			"native thinking field",
+			ollamaChatMessage{Role: "assistant", Content: "answer", Thinking: "reasoning"},
+			"reasoning",
+			"answer",
+		},
+		{
+			"inline paired tags",
+			ollamaChatMessage{Role: "assistant", Content: "<think>reasoning</think>answer"},
+			"reasoning",
+			"answer",
+		},
+		{
+			"inline orphan closer",
+			ollamaChatMessage{Role: "assistant", Content: "reasoning</think>answer"},
+			"reasoning",
+			"answer",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out := fromOllamaResponse(ollamaChatResponse{
+				Model:      "glm-5.2:cloud",
+				Message:    tt.message,
+				Done:       true,
+				DoneReason: "stop",
+			}, nil)
+			if got := out.Thinking(); got != tt.wantThinking {
+				t.Errorf("Thinking() = %q, want %q", got, tt.wantThinking)
+			}
+			if got := out.Text(); got != tt.wantText {
+				t.Errorf("Text() = %q, want %q", got, tt.wantText)
 			}
 		})
 	}

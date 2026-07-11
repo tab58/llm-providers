@@ -32,6 +32,23 @@ func TestCompletionResponseText(t *testing.T) {
 	}
 }
 
+func TestThinkingContent(t *testing.T) {
+	res := CompletionResponse{Content: []ContentBlock{
+		NewThinkingContent("step 1"),
+		NewThinkingContent("step 2"),
+		NewTextContent("answer"),
+	}}
+	if got := res.Text(); got != "answer" {
+		t.Errorf("Text() = %q, want %q (thinking blocks must not leak into text)", got, "answer")
+	}
+	if got := res.Thinking(); got != "step 1step 2" {
+		t.Errorf("Thinking() = %q, want %q", got, "step 1step 2")
+	}
+	if got := CombinedText(res.Content); got != "answer" {
+		t.Errorf("CombinedText() = %q, want %q (thinking excluded from resend text)", got, "answer")
+	}
+}
+
 func TestMessageConstructors(t *testing.T) {
 	tests := []struct {
 		name     string

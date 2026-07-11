@@ -1,6 +1,9 @@
 package common
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"strings"
+)
 
 // Role represents the author of a message in a conversation.
 // Both Anthropic and OpenAI use the same role strings, so this type
@@ -22,6 +25,7 @@ type ContentType string
 
 const (
 	ContentTypeText       ContentType = "text"
+	ContentTypeThinking   ContentType = "thinking"
 	ContentTypeToolUse    ContentType = "tool_use"
 	ContentTypeToolResult ContentType = "tool_result"
 )
@@ -30,6 +34,7 @@ const (
 // within a message. The Type field determines which other fields are
 // populated:
 //   - ContentTypeText: Text
+//   - ContentTypeThinking: Text (model chain-of-thought, never answer text)
 //   - ContentTypeToolUse: ToolUseID, ToolName, ToolInput
 //   - ContentTypeToolResult: ToolResultID, ToolOutput, ToolName
 //
@@ -56,6 +61,17 @@ type ContentBlock struct {
 func NewTextContent(text string) ContentBlock {
 	return ContentBlock{
 		Type: ContentTypeText,
+		Text: text,
+	}
+}
+
+// NewThinkingContent creates a thinking content block carrying the model's
+// chain-of-thought. Providers classify reasoning output here so Text() and
+// CombinedText() only ever see answer text; consumers that want the raw
+// reasoning read these blocks (or CompletionResponse.Thinking).
+func NewThinkingContent(text string) ContentBlock {
+	return ContentBlock{
+		Type: ContentTypeThinking,
 		Text: text,
 	}
 }
@@ -174,6 +190,19 @@ func (r CompletionResponse) Text() string {
 		}
 	}
 	return ""
+}
+
+// Thinking returns the model's chain-of-thought: all thinking content blocks
+// concatenated in order. Empty when the model did not think (or the provider
+// could not separate reasoning from answer text).
+func (r CompletionResponse) Thinking() string {
+	var sb strings.Builder
+	for _, block := range r.Content {
+		if block.Type == ContentTypeThinking {
+			sb.WriteString(block.Text)
+		}
+	}
+	return sb.String()
 }
 
 // ToolCalls returns all tool use content blocks from the response.

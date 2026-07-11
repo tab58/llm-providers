@@ -16,7 +16,7 @@ import (
 	"github.com/tab58/llm-providers/ratelimit"
 )
 
-var thinkBlockRe = regexp.MustCompile(`(?s)<think>.*?</think>\s*`)
+var thinkBlockRe = regexp.MustCompile(`(?s)<think>(.*?)</think>\s*`)
 
 const OLLAMA_CLOUD_BASE_URL = "https://ollama.com/"
 
@@ -168,8 +168,12 @@ type ollamaChatResponse struct {
 }
 
 type ollamaChatMessage struct {
-	Role      string           `json:"role"`
-	Content   string           `json:"content"`
+	Role    string `json:"role"`
+	Content string `json:"content"`
+	// Thinking carries the model's chain-of-thought when the server separates
+	// it natively (thinking models on Ollama Cloud). Response-only: requests
+	// never set it, so omitempty keeps it off the wire.
+	Thinking  string           `json:"thinking,omitempty"`
 	ToolCalls []ollamaToolCall `json:"tool_calls,omitempty"`
 	// ToolName labels a role-"tool" message with the tool that produced it.
 	// Ollama's native API has no tool_call_id; this is its only linkage.
@@ -280,6 +284,7 @@ func (o *Client) SendStreamingMessage(ctx context.Context, req common.Completion
 	var started bool
 	var accumulatedToolCalls []ollamaToolCall
 	var accumulatedText strings.Builder
+	var accumulatedThinking strings.Builder
 	thinkParser := newThinkBlockParser(events)
 	decoder := json.NewDecoder(resp.Body)
 	for decoder.More() {
@@ -292,6 +297,16 @@ func (o *Client) SendStreamingMessage(ctx context.Context, req common.Completion
 		if !started {
 			events <- common.StreamEvent{Type: common.StreamEventStart}
 			started = true
+		}
+
+		// Native thinking deltas (server-separated chain-of-thought).
+		// Inline think tags in content deltas are handled by thinkParser;
+		// note a bare </think> closer with no opener can't be reclassified
+		// mid-stream (earlier deltas are already emitted) — the terminal
+		// response is still classified correctly via fromOllamaResponse.
+		if chunk.Message.Thinking != "" {
+			events <- common.StreamEvent{Type: common.StreamEventThinking, Text: chunk.Message.Thinking}
+			accumulatedThinking.WriteString(chunk.Message.Thinking)
 		}
 
 		if chunk.Message.Content != "" {
@@ -312,9 +327,10 @@ func (o *Client) SendStreamingMessage(ctx context.Context, req common.Completion
 			}
 			// Streamed text arrives spread across chunks and the done chunk's
 			// content is typically empty — the terminal response must carry
-			// the full accumulated text (think blocks are stripped inside
-			// fromOllamaResponse) or callers see an empty final answer.
+			// the full accumulated text and thinking (classified into blocks
+			// inside fromOllamaResponse) or callers see an empty final answer.
 			chunk.Message.Content = accumulatedText.String()
+			chunk.Message.Thinking = accumulatedThinking.String()
 			o.logf("ollama: done chunk content=%q tool_calls=%d done_reason=%s eval_count=%d",
 				chunk.Message.Content, len(chunk.Message.ToolCalls), chunk.DoneReason, chunk.EvalCount)
 			res := fromOllamaResponse(chunk, o.log)
@@ -563,11 +579,32 @@ func toOllamaTools(tools []common.ToolDefinition, log logger.Logger) ([]ollamaTo
 	return result, nil
 }
 
-// StripThinkBlocks removes <think>...</think> blocks that Qwen 3.5 models
-// emit in thinking mode. This is a safety net in case think:false is ignored.
-// Exported so callers accumulating streaming text can also strip think blocks.
+// StripThinkBlocks returns only the answer text of a response that inlines
+// think tags (models that ignore think:false). Handles both paired
+// <think>...</think> blocks and the bare closers GLM/Qwen templates produce
+// when the opening tag lives in the prompt. Exported so callers accumulating
+// streaming text can also strip think blocks; use splitThinkBlocks-backed
+// responses (thinking content blocks) when the reasoning must be kept.
 func StripThinkBlocks(s string) string {
-	return strings.TrimSpace(thinkBlockRe.ReplaceAllString(s, ""))
+	_, text := splitThinkBlocks(s)
+	return text
+}
+
+// splitThinkBlocks classifies inline-tagged model output into chain-of-thought
+// and answer text. Paired <think>...</think> blocks are extracted first; if a
+// bare </think> remains (the opening tag was part of the prompt template),
+// everything before the last closer is reasoning. Nothing is discarded.
+func splitThinkBlocks(s string) (thinking, text string) {
+	var th strings.Builder
+	for _, m := range thinkBlockRe.FindAllStringSubmatch(s, -1) {
+		th.WriteString(m[1])
+	}
+	text = thinkBlockRe.ReplaceAllString(s, "")
+	if idx := strings.LastIndex(text, thinkClose); idx >= 0 {
+		th.WriteString(text[:idx])
+		text = text[idx+len(thinkClose):]
+	}
+	return strings.TrimSpace(th.String()), strings.TrimSpace(text)
 }
 
 type thinkBlockParser struct {
@@ -656,7 +693,16 @@ func (p *thinkBlockParser) matchTagPrefix(text, tag string) int {
 func fromOllamaResponse(res ollamaChatResponse, log logger.Logger) common.CompletionResponse {
 	var content []common.ContentBlock
 
-	text := StripThinkBlocks(res.Message.Content)
+	// Thinking arrives either in the native field (server separated it) or
+	// inline as think tags (model ignored think:false). Classify both as
+	// thinking blocks — surface, don't sanitize.
+	thinking, text := splitThinkBlocks(res.Message.Content)
+	if res.Message.Thinking != "" {
+		content = append(content, common.NewThinkingContent(res.Message.Thinking))
+	}
+	if thinking != "" {
+		content = append(content, common.NewThinkingContent(thinking))
+	}
 	if text != "" {
 		content = append(content, common.NewTextContent(text))
 	}

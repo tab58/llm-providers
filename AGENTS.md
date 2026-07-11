@@ -43,7 +43,9 @@ testutils/                   CollectEvents helper for stream tests
 
 ### The contract (`common`)
 
-`LLM` has seven methods: `SendSyncMessage`, `SendStreamingMessage`, `SendMessageWithTools`, `CountTokens`, `ListModels`, `GetCurrentModel`, `GetContextWindowSize`. `ContentBlock` is a tagged union discriminated by `Type` (`text`, `tool_use`, `tool_result`); constructors (`NewTextContent`, `NewToolUseContent`, `NewToolResultContent`, `NewUserMessage`, …) are the intended way to build them.
+`LLM` has seven methods: `SendSyncMessage`, `SendStreamingMessage`, `SendMessageWithTools`, `CountTokens`, `ListModels`, `GetCurrentModel`, `GetContextWindowSize`. `ContentBlock` is a tagged union discriminated by `Type` (`text`, `thinking`, `tool_use`, `tool_result`); constructors (`NewTextContent`, `NewThinkingContent`, `NewToolUseContent`, `NewToolResultContent`, `NewUserMessage`, …) are the intended way to build them.
+
+**Thinking is classified, not sanitized.** Model chain-of-thought surfaces as `thinking` content blocks (`CompletionResponse.Thinking()` concatenates them); `Text()` and `CombinedText()` return answer text only, and `CombinedText` excludes thinking so it is never resent in conversation history. The Ollama adapter fills thinking blocks from the API's native `thinking` field and, as a fallback for models that ignore `think:false`, from inline `<think>` tags — including the bare `</think>` closers GLM/Qwen templates produce when the opening tag lives in the prompt (`splitThinkBlocks`). Streaming emits native thinking deltas as `StreamEventThinking`; a bare inline closer cannot be reclassified mid-stream (earlier deltas are already emitted as `delta`), but the terminal `stop` response is always classified correctly.
 
 ### Streaming protocol
 
